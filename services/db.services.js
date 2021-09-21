@@ -1,7 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
 import faker from "faker";
-import { writeFile } from "fs";
 
 class AcademloDb {
 
@@ -19,34 +18,60 @@ class AcademloDb {
     static findById = async(id) => {
         try {
             let data = await fs.readFile(this.dbPath, "utf8");
-            let user = JSON.parse(data).find( data => data.id === id);
-            return user;
+            let user = JSON.parse(data)
+            return user.find( data => data.id === id);;
         } catch (error) {
-            console.log(error);
+            throw new Error("Hubo un error al tratar de obtener el registro del usuario");
         }
     }
 
-    static create = async(obj, id) => {
+    static create = async(obj) => {
         try {
-            let data = await fs.readFile(this.dbPath, "utf8");
-            let user = Object.values(obj);
-            data.push(user);
-            fs.writeFile(this.dbPath, JSON.stringify(data));
-            let data2 = await fs.readFile(this.dbPath, "utf8");
-            console.log(user);
-            console.log(data2);
-            return data2;
+            let data = await this.findAll();
+            let nextId = data.length + 1;
+
+            const newObj = obj;
+            newObj.id = nextId;
+
+            data.push(newObj);
+            await fs.writeFile(this.dbPath, JSON.stringify(data));
+
+            return newObj;
         } catch (error) {
-            console.log(error);
+            throw new Error(error);
         }
     }
 
-    static update = (obj, id) => {
-
+    static update = async(obj, id) => {
+        try{
+            let data = await this.findAll();
+    
+            let index = data.findIndex(item => { return item.id === id } );
+            if (index === -1){
+                throw new Error("No existe el id en la DB");
+            }
+            let newObj = { id,...obj };
+            data[index] = newObj
+            await fs.writeFile(this.dbPath, JSON.stringify(data));
+            return newObj
+        }catch(error){
+            throw new Error(error);
+        }
     }
 
-    static delete = id => {
-
+    static delete = async(id) => {
+        try{
+            let data = await this.findAll();
+            let index = data.findIndex(item => item.id === id);
+            if (index === -1){
+                return false;
+            }
+            data.splice(index, 1);
+            await fs.writeFile(this.dbPath, JSON.stringify(data));
+            return true
+        }catch(error){
+            throw new Error(error)
+        }
     }
 
     static clear = async() => {
